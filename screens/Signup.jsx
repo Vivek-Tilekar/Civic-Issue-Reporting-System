@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import axios from 'axios';
+import config from "../config.json"
 
 export default function Signup({ navigation }) {
 
@@ -10,7 +11,7 @@ export default function Signup({ navigation }) {
 
     const handleSignup = async () => {
         try {
-          const response = await axios.post('http://192.168.15.50:3000/api/auth/signup', { 
+          const response = await axios.post(`${config.API_BASE_URL}/api/auth/signup`, { 
             username, 
             email, 
             password 
@@ -19,12 +20,13 @@ export default function Signup({ navigation }) {
           navigation.navigate('Login');  // Navigate to the Login page after successful signup
         } catch (error) {
           Alert.alert('Error', error.response?.data?.message || 'Something went wrong');
+          console.log(error.message);
         }
       };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Login 12</Text>
+      <Text style={styles.heading}>Sign Up</Text>
       <View style={styles.inputView}>
         <TextInput
           style={styles.TextInput}
@@ -70,7 +72,6 @@ const styles = StyleSheet.create({
     width: "80%",
     height: 45,
     marginBottom: 20,
-    // alignItems: "center",
   },
   TextInput: {
     height: 50,
