@@ -3,12 +3,14 @@ import React from 'react';
 import Dashboard from './Dashboard';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AddVolunteer from './AddVolunteer';
+import Login from './Login';
 
 const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/home" element={<Dashboard />} />
         <Route path='add-volunteer' element={<AddVolunteer />} />
       </Routes>
     </BrowserRouter>

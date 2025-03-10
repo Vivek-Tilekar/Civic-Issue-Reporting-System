@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from "react";
-// import "mapbox-gl/dist/mapbox-gl.css";
-// import ReactMapGl, { Marker } from "react-map-gl";
 import axios from "axios";
 import markerIcon from "./marker-icon.png";
-import { Bar } from "react-chartjs-2";
-// import { Map, Marker } from "react-map-gl";
-// import "maplibre-gl/dist/maplibre-gl.css";
+import { Bar, Pie } from "react-chartjs-2";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -16,6 +12,8 @@ import {
     Legend,
 } from "chart.js";
 import { Link } from "react-router-dom";
+import config from "./config.json"
+import { useNavigate } from "react-router-dom";
 
 // Register Chart.js components
 ChartJS.register(
@@ -51,33 +49,25 @@ const Dashboard = () => {
     const [newStatus, setNewStatus] = useState('');
     const [showPopup, setShowPopup] = useState(false);
 
-    // Fetch data from API
-    // useEffect(() => {
-    //     const fetchRequests = async () => {
-    //         try {
-    //             const response = await axios.get(
-    //                 "http://192.168.31.12:3000/api/issue/requests"
-    //             );
-    //             if (response.data && response.data.data) {
-    //                 setRequests(response.data.data);
-    //             }
-    //         } catch (error) {
-    //             console.error("Error fetching data:", error);
-    //         }
-    //     };
+    
 
-    //     const intervalId = setInterval(fetchRequests, 1000);
+    const navigate = useNavigate();
+    const [userData, setUserData] = useState(null);
 
-    // // Cleanup interval on component unmount
-    //     return () => clearInterval(intervalId);
-
-    //     fetchRequests();
-    // }, []);
+    useEffect(() => {
+        // Get user details from localStorage
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+        setUserData(JSON.parse(storedUser));
+        } else {
+        navigate("/"); // Redirect to login if no user data found
+        }
+    }, [navigate]);
 
     useEffect(() => {
         const fetchRequests = async () => {
             try {
-                const response = await axios.get("http://192.168.31.12:3000/api/issue/requests");
+                const response = await axios.get(`${config.API_BASE_URL}/api/issue/requests`);
                 if (response.data && response.data.data) {
                     setRequests(response.data.data);
                 }
@@ -90,25 +80,9 @@ const Dashboard = () => {
         const intervalId = setInterval(fetchRequests, 10000); // Fetch every 10 seconds instead of 1 sec
     
         return () => clearInterval(intervalId); // Cleanup
-    }, []);
+    }, [requests]);
 
-    // useEffect(() => {
-
-    //     const fetchVolunteers = async () => {
-            
-    //             const response = await axios.get(
-    //                 "http:/192.168.31.12.168:3000/api/volunteers/fetch"
-    //             );
-    //             console.log('Full response:', response.data); // Log the full response
-            
-    //             setVolunteer(response.data);
-               
-    //     };
-        
-
-    //     fetchVolunteers()
-
-    // }, []);
+    
 
     const handleCityChange = (city) => {
         setSelectedCity(city);
@@ -121,37 +95,14 @@ const Dashboard = () => {
         }
     };
 
-    // const handleCityChange = (event) => {
-    //     const city = event.target.value;
-    //     let coordinates;
-        
-    //     switch (city) {
-    //       case "Vadodara":
-    //         coordinates = { latitude: 22.275193, longitude: 73.187928 };
-    //         break;
-    //       case "Ahmedabad":
-    //         coordinates = { latitude: 23.0225, longitude: 72.5714 };
-    //         break;
-    //       case "Gandhinagar":
-    //         coordinates = { latitude: 23.2156, longitude: 72.6369 };
-    //         break;
-    //       default:
-    //         coordinates = { latitude: 37.7749, longitude: -122.4194 }; // San Francisco
-    //     }
-    //     setSelectedCity(coordinates);
-    //   };
-
-    // Filter requests by selected city
-    const handleAreaChange = (area) => {
-        setSelectedArea(area);
-    };
+    
 
     const filteredRequests = requests.filter(
         (request) => request.city === "Vadodara"
     );
 
     const filteredRequest2 = requests.filter(
-        (request) => request.area === selectedCity
+        (request) => request.area === userData?.area
     );
 
     console.log(volunteer)
@@ -175,7 +126,7 @@ const Dashboard = () => {
       const updateStatus = async () => {
         if (!selectedRequest) return;
         try {
-          const response = await axios.put('http://192.168.31.12:3000/api/issue/requests', {
+          const response = await axios.put(`${config.API_BASE_URL}/api/issue/requests`, {
             id: selectedRequest._id,
             status: newStatus,
           });
@@ -190,13 +141,14 @@ const Dashboard = () => {
         }
       };
 
-    const areaFilteredRequests = selectedArea
-        ? filteredRequests.filter((request) => request.area === selectedArea)
+    const areaFilteredRequests = userData?.area
+        ? filteredRequests.filter((request) => request.area === userData?.area)
         : filteredRequests;
 
 
-    const totalRequests = filteredRequests.length;
-    const statusStats = filteredRequests.reduce(
+    const totalRequests = filteredRequest2.length;
+    
+    const statusStats = filteredRequest2.reduce(
         (acc, request) => {
             acc[request.status] = (acc[request.status] || 0) + 1;
             return acc;
@@ -204,29 +156,15 @@ const Dashboard = () => {
         { pending: 0, completed: 0, inProgress: 0 }
     );
 
-    const needsStats = filteredRequests.reduce((acc, request) => {
-        request.needs.forEach((need) => {
-            acc[need] = (acc[need] || 0) + 1;
-        });
-        return acc;
-    }, {});
+    
 
-    const locationStats = filteredRequests.reduce((acc, request) => {
+    const locationStats = filteredRequest2.reduce((acc, request) => {
         const { area, numberOfPeople } = request;
         acc[area] = (acc[area] || 0) + numberOfPeople;
         return acc;
     }, {});
 
-    const barChartData = {
-        labels: Object.keys(needsStats),
-        datasets: [
-            {
-                label: "Number of Requests",
-                data: Object.values(needsStats),
-                backgroundColor: "#4BC0C0",
-            },
-        ],
-    };
+    
 
     const locationChartData = {
         labels: Object.keys(locationStats),
@@ -289,6 +227,22 @@ const Dashboard = () => {
 
     const statusAreas = Object.entries(statusAreaStats).sort((a, b) => b[1] - a[1]);
 
+    const statusStatistic = filteredRequest2.reduce((acc, request) => {
+        acc[request.status] = (acc[request.status] || 0) + 1;
+        return acc;
+    }, {});
+    
+    const statusChartData = {
+        labels: Object.keys(statusStatistic), // ["Pending", "In progress", "Complete"]
+        datasets: [
+            {
+                label: "Number of Requests by Status",
+                data: Object.values(statusStatistic), // [Count of Pending, In progress, Complete]
+                backgroundColor: ["#FF6384", "#FFCE56", "#4BC0C0"], // Different colors for each status
+            },
+        ],
+    };
+
     return (
         <div style={{ width: "100vw", height: "100vh", padding: "20px", boxSizing: "border-box" }}>
             {/* Header */}
@@ -305,46 +259,7 @@ const Dashboard = () => {
                 <h1>ResQ Board</h1>
             </div>
 
-            {/* City Selector */}
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    marginBottom: "20px",
-                }}
-            >
-                <select
-                    onChange={(e) => handleCityChange(e.target.value)}
-                    value={selectedCity}
-                    className="form-select"
-                    aria-label="Select city"
-                    style={{
-                        padding: "10px",
-                        fontSize: "16px",
-                        borderRadius: "8px",
-                        border: "1px solid #ccc",
-                        width: "200px",
-                        textAlign: "center",
-                    }}
-                >
-                    <option value="Manjalpur">Manjalpur</option>
-                    <option value="Vadodara">Vadodara</option>
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Gandhinagar">Gandhinagar</option>
-                    <option value="Sayajiganj">Sayajiganj</option>
-                    <option value="Gorwa">Gorwa</option>
-                    <option value="Alkapuri">Alkapuri</option>
-                    <option value="Atladara">Atladara</option>
-                    <option value="Bhaily">Bhaily</option>
-                    <option value="Chhani">Chhani</option>
-                    <option value="Danteshwar">Danteshwar</option>
-                    <option value="Wadi">Wadi</option>
-                    <option value="Gotri">Gotri</option>
-                    <option value="Harni">Harni</option>
-                    <option value="Makarpura">Makarpura</option>
-                    <option value="Mandvi">Mandvi</option>
-                </select>
-            </div>
+            
 
             {/* Main content (Flex Layout) */}
             <div
@@ -379,24 +294,12 @@ const Dashboard = () => {
                         <h3>Status Breakdown</h3>
                         <ul style={{ listStyleType: "none", paddingLeft: 0 }}>
                             <li>Pending: {statusStats.pending}</li>
-                            <li>Resolved: {statusStats.completed}</li>
+                            <li>Resolved: {statusStats.Completed}</li>
                             <li>In Progress: {statusStats.inProgress}</li>
                         </ul>
                     </div>
 
-                    {/* Needs Breakdown (Bar Chart) */}
-                    {/* <div
-                        style={{
-                            backgroundColor: "#f2f2f2",
-                            borderRadius: "8px",
-                            padding: "20px",
-                            marginTop: "20px",
-                            flex: 1,
-                        }}
-                    >
-                        <h3>Needs Breakdown</h3>
-                        <Bar data={barChartData} options={{ responsive: true }} />
-                    </div> */}
+                    
 
                     <div style={{ backgroundColor: "#f2f2f2", borderRadius: "8px", padding: "20px", marginTop: "20px", flex: 1 }}>
                         <h3>Category Breakdown</h3>
@@ -436,7 +339,7 @@ const Dashboard = () => {
                         }}
                     >
                         <h3>Location and Number of People Breakdown</h3>
-                        <Bar data={locationChartData} options={{ responsive: true }} />
+                        <Bar data={statusChartData} options={{ responsive: true }} />
                     </div>
                 </div>
 
@@ -460,53 +363,9 @@ const Dashboard = () => {
                             boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
                         }}
                     >
-                        {/* <ReactMapGl
-                            {...viewPort}
-                            mapboxAccessToken="pk.eyJ1Ijoic2h1YmhhbTExNzMiLCJhIjoiY20zOW95eDV1MHg5bTJqcXhhNHFkbDJtMSJ9.tJ6JcbRbK3YD8MrfvZDg-w"
-                            width="100%"
-                            height="100%"
-                            interactive={true}
-                            transitionDuration={200}
-                            mapStyle="mapbox://styles/mapbox/streets-v12"
-                            onViewportChange={(nextViewport) => setViewPort(nextViewport)}
-                        >
-                            {filteredRequests.map((request) => (
-                                <Marker
-                                    key={request._id}
-                                    latitude={request.latitude}
-                                    longitude={request.longitude}
-                                >
-                                    <img
-                                        src={markerIcon}
-                                        alt="marker"
-                                        style={{ width: 30, height: 40 }}
-                                    />
-                                </Marker>
-                            ))}
-                        </ReactMapGl> */}
+                        
 
-                        {/* <Map
-                            initialViewState={viewPort}
-                            style={{ width: "100%", height: "100%" }}
-                            mapStyle="https://demotiles.maplibre.org/style.json"
-                            onMove={evt => setViewPort(evt.viewState)}
-                        >
-                            {filteredRequests.map((request) => (
-                                <Marker
-                                    key={request._id}
-                                    latitude={request.latitude}
-                                    longitude={request.longitude}
-                                >
-                                    <img
-                                        src={markerIcon}
-                                        alt="marker"
-                                        style={{ width: 30, height: 40 }}
-                                    />
-                                </Marker>
-                            ))}
-                        </Map> */}
-
-                        <MapComponent filteredRequests={filteredRequests} markerIcon={markerIcon} city={selectedCity} />
+                        <MapComponent filteredRequests={filteredRequests} markerIcon={markerIcon} city={userData?.area} />
                     </div>
 
                     {/* Issue card */}
@@ -514,15 +373,31 @@ const Dashboard = () => {
                     <h3 style={{ margin: "30px" }}>Recent Issues</h3>
                     <div style={{ height: "350px", backgroundColor: "#f2f2f2", borderRadius: "8px", padding: "20px", overflowY: "auto" }}>
                         <ul style={{ listStyle: "none", padding: 0 }}>
-                            {filteredRequests.map((request) => {
+                            {filteredRequest2.slice().reverse().map((request) => {
                                 const sentimentResult = sentiment.analyze(request.description);
                                 const sentimentScore = sentimentResult.score;
                                 const isHighPriority = sentimentScore < -2;
                                 return (
-                                    <li key={request._id} style={{ marginBottom: "15px", padding: "10px", backgroundColor: isHighPriority ? "#f8d7da" : "#fff", borderRadius: "4px", border: "1px solid #ddd", cursor: "pointer" }} onClick={() => setSelectedRequest(request)}>
+                                    <li key={request._id} style={{ position: "relative", marginBottom: "15px", padding: "10px", backgroundColor: isHighPriority ? "#f8d7da" : "#fff", borderRadius: "4px", border: "1px solid #ddd", cursor: "pointer" }} onClick={() => setSelectedRequest(request)}>
                                         <div style={{ fontWeight: "bold" }}>{request.name}</div>
                                         <div>Area: {request.area}</div>
                                         <div>Status: {request.status}</div>
+                                        <div style={{ 
+                                            position: "absolute", 
+                                            top: "0", 
+                                            right: "0", 
+                                            padding: "5px"
+                                        }}>
+                                            Time: {new Date(request.createdAt).toLocaleString("en-IN", {
+                                                    day: "2-digit",
+                                                    month: "2-digit",
+                                                    year: "numeric",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                    second: "2-digit",
+                                                    hour12: true,
+                                                })}
+                                        </div>
                                         {isHighPriority && (
                                             <div style={{ marginTop: "10px", padding: "5px", backgroundColor: "#f8d7da", color: "#721c24", borderRadius: "4px", fontWeight: "bold" }}>High Priority</div>
                                         )}
@@ -556,15 +431,16 @@ const Dashboard = () => {
                                 <h2>{selectedRequest.name}</h2>
                                 <p><strong>Area:</strong> {selectedRequest.area}</p>
                                 <p><strong>Status:</strong> {selectedRequest.status}</p>
-                                <p><strong>PhoneNo:</strong> {selectedRequest.phoneNo}</p>
+                                <p><strong>Category:</strong> {selectedRequest.category}</p>
+                                <p><strong>Address:</strong> {selectedRequest.address}</p>
                                 <p><strong>Description:</strong> {selectedRequest.description}</p>
                                 <p><strong>Sentiment Score:</strong> {sentiment.analyze(selectedRequest.description).score}</p>
-                                <img src={`http://192.168.31.12:3000${selectedRequest.photo}`} alt="User Issue" 
+                                <img src={`${config.API_BASE_URL}${selectedRequest.photo}`} alt="User Issue" 
                                     style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }} 
                                 />
                                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ width: "100%", marginTop: "10px" }}>
-                                    <option value="Pending">Pending</option>
-                                    <option value="In Progress">In Progress</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="inProgress">In Progress</option>
                                     <option value="Completed">Completed</option>
                                 </select>
                                 <button onClick={updateStatus} 
@@ -579,54 +455,10 @@ const Dashboard = () => {
                         </div>
                     )}
 
-                    {/* <h3 style={{ margin: "30px" }}>Recent Issues</h3>
-                    <div style={{ height: "350px", backgroundColor: "#f2f2f2", borderRadius: "8px", padding: "20px", overflowY: "auto" }}>
-
-                        <ul style={{ listStyle: "none", padding: 0 }}>
-                            {filteredRequests.map((request) => {
-                                const sentimentResult = sentiment.analyze(request.description);
-                                const sentimentScore = sentimentResult.score;
-
-                                const isHighPriority = sentimentScore < -2;
-
-                                const itemStyle = {
-                                    marginBottom: "15px",
-                                    padding: "10px",
-                                    backgroundColor: isHighPriority ? "#f8d7da" : "#fff",
-                                    borderRadius: "4px",
-                                    border: isHighPriority ? "1px solid #f5c6cb" : "1px solid #ddd",
-                                };
-
-                                return (
-                                    <li key={request._id} style={itemStyle}>
-                                        <div style={{ fontWeight: "bold" }}>{request.name}</div>
-                                        <div>Area: {request.area}</div>
-                                        <div>Status: {request.status}</div>
-                                        <div>PhoneNo: {request.phoneNo}</div>
-                                        <div>Description: {request.description}</div>
-                                        <div>Sentiment Score: {sentimentScore}</div> */}
-
-                                        {/* Optionally, display a "Priority" label */}
-                                        {/* {isHighPriority && (
-                                            <div style={{
-                                                marginTop: "10px",
-                                                padding: "5px",
-                                                backgroundColor: "#f8d7da",
-                                                color: "#721c24",
-                                                borderRadius: "4px",
-                                                fontWeight: "bold"
-                                            }}>
-                                                High Priority
-                                            </div>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div> */}
+                    
 
                     <div style={{ backgroundColor: "#f2f2f2", borderRadius: "8px", padding: "20px", marginTop: "20px", flex: 1 }}>
-                        <h3>Category Breakdown for {selectedCity}</h3>
+                        <h3>Category Breakdown for {userData?.area}</h3>
                         <Bar data={categoryAreaChartData} options={{ responsive: true }} />
                     </div>
 
@@ -635,7 +467,7 @@ const Dashboard = () => {
                     {/* Status report of area */}
 
                     <div style={{ backgroundColor: "#f2f2f2", borderRadius: "8px", padding: "20px", marginTop: "20px" }}>
-                        <h3>status of Reports in {selectedCity}</h3>
+                        <h3>status of Reports in {userData?.area}</h3>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
                             <thead>
                                 <tr style={{ backgroundColor: "#ddd" }}>
