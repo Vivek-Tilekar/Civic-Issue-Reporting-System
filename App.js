@@ -8,6 +8,8 @@ import Home from './screens/Home';
 import Reports from './screens/Reports';
 import Issue from './screens/issue';
 import './screens/i18n'
+import Notification from './screens/Notification';
+import MyReport from './screens/MyReport';
 // import '@formatjs/intl-pluralrules/polyfill';
 // import CreateEmergencyRequest from './screens/CreateEmergencyRequest';
 
@@ -24,7 +26,8 @@ export default function App() {
         <Stack.Screen name="Home" component={Home} />
         <Stack.Screen name="Reports" component={Reports} />
         <Stack.Screen name="issue" component={Issue} />
-        
+        <Stack.Screen name="Notifications" component={Notification} />
+        <Stack.Screen name="myReport" component={MyReport} />
       </Stack.Navigator>
     </NavigationContainer>
   );

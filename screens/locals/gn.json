@@ -4,5 +4,6 @@
     "description": "વર્ણન",
     "status": "સ્થિતિ",
     "location": "સ્થાન",
-    "needs": "જરૂરિયાતો"
+    "needs": "જરૂરિયાતો",
+    "City": "શહેર"
     }

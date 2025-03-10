@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, Button, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { 
+  View, TextInput, Button, Text, StyleSheet, ScrollView, 
+  Image, TouchableOpacity, Alert, KeyboardAvoidingView, Platform
+} from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
@@ -9,9 +12,9 @@ import config from "../config.json";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const cityAreaData = {
-    "Vadodara": ["Gorwa", "Manjalpur", "Bajwa"],
+    "Vadodara": ["Gorwa", "Manjalpur", "Bajwa", "Sayajigunj"],
     "Ahemdabad": ["Chandkheda", "Ranip", "Maninagar"],
-    "Gandhinagar": ["Gift City", "Akshardham", "koba circle"],
+    "Gandhinagar": ["Gift City", "Akshardham", "Koba Circle"],
 };
 
 const issueCategories = ["Road Damage", "Street Light Outage", "Water Leakage", "Garbage Overflow", "Other"];
@@ -25,29 +28,31 @@ export default function CivicIssueReport({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [address, setAddress] = useState('');
   const [username, setUsername] = useState('');
+  const [userID, setUserID] = useState('');
   const { t } = useTranslation();
 
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        setLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       }
     })();
   }, []);
 
   useEffect(() => {
-    const fetchUsername = async () => {
+    const fetchUserDetails = async () => {
       const storedUsername = await AsyncStorage.getItem('username');
-      if (storedUsername) {
-        setUsername(storedUsername);
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        Alert.alert("Error", "User is not authenticated.");
+        return;
       }
+      setUsername(storedUsername || '');
+      setUserID(userId);
     };
-    fetchUsername();
+    fetchUserDetails();
   }, []);
 
   const handleCameraLaunch = async () => {
@@ -66,8 +71,10 @@ export default function CivicIssueReport({ navigation }) {
       Alert.alert("Error", "All fields are required.");
       return;
     }
+    
     const formData = new FormData();
     formData.append('photo', { uri: imageUri, name: 'issue.jpg', type: 'image/jpeg' });
+    formData.append('userId', userID);
     formData.append('name', username);
     formData.append('city', selectedCity);
     formData.append('area', selectedArea);
@@ -88,17 +95,16 @@ export default function CivicIssueReport({ navigation }) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <ScrollView>
-        <Text style={styles.title}>{t('reportCivicIssue')}</Text>
+      <ScrollView contentContainerStyle={styles.scrollView}>
+
         <RNPickerSelect placeholder={{ label: 'Select Issue Category', value: null }} items={issueCategories.map(cat => ({ label: cat, value: cat }))} onValueChange={setSelectedCategory} style={pickerStyles} value={selectedCategory} />
-        <TextInput style={styles.textbox} placeholder='Enter Address' onChangeText={setAddress} />
+        <TextInput style={styles.input} placeholder='Enter Address' onChangeText={setAddress} />
         <RNPickerSelect placeholder={{ label: 'Select City', value: null }} items={Object.keys(cityAreaData).map(city => ({ label: city, value: city }))} onValueChange={setSelectedCity} style={pickerStyles} value={selectedCity} />
         <RNPickerSelect placeholder={{ label: 'Select Area', value: null }} items={selectedCity ? cityAreaData[selectedCity].map(area => ({ label: area, value: area })) : []} onValueChange={setSelectedArea} style={pickerStyles} value={selectedArea} />
-        
-        
-        <TextInput style={styles.textbox} placeholder='Enter Description' onChangeText={setDescription} multiline />
-        {/* <Text style={styles.locationText}>Location: Lat {location.latitude}, Lon {location.longitude}</Text> */}
-        <Button title='Take Photo' onPress={handleCameraLaunch} />
+        <TextInput style={styles.input} placeholder='Enter Description' onChangeText={setDescription} multiline />
+        <TouchableOpacity style={styles.cameraBtn} onPress={handleCameraLaunch}>
+          <Text style={styles.cameraText}>Take Photo</Text>
+        </TouchableOpacity>
         {imageUri && <Image source={{ uri: imageUri }} style={styles.imagePreview} />}
       </ScrollView>
       <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
@@ -109,14 +115,150 @@ export default function CivicIssueReport({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15, backgroundColor: "#f9f9f9" },
-  title: { fontSize: 20, fontWeight: '600', textAlign: 'center', marginVertical: 15 },
-  textbox: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginVertical: 8, backgroundColor: "#fff" },
-  locationText: { marginTop: 10, fontSize: 14, color: '#555' },
+  container: { flex: 1, backgroundColor: "#f4f4f4" },
+  scrollView: { padding: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginBottom: 10, backgroundColor: "#fff" },
+  cameraBtn: { backgroundColor: "#007BFF", padding: 12, borderRadius: 8, alignItems: "center", marginBottom: 10 },
+  cameraText: { color: "#fff", fontSize: 16 },
   submitBtn: { backgroundColor: "#007BFF", padding: 15, borderRadius: 8, alignItems: "center", marginTop: 20, position: "absolute", bottom: 10, width: "90%", alignSelf: "center" },
   submitText: { color: "#fff", fontSize: 16, fontWeight: '600' },
-  imagePreview: { width: 100, height: 100, borderRadius: 8, marginTop: 15, alignSelf: 'center' },
+  imagePreview: { width: 100, height: 100, borderRadius: 8, alignSelf: 'center', marginTop: 15 },
 });
+
+
+// import React, { useEffect, useId, useState } from 'react';
+// import { View, TextInput, Button, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+// import * as Location from 'expo-location';
+// import * as ImagePicker from 'expo-image-picker';
+// import axios from 'axios';
+// import { useTranslation } from 'react-i18next';
+// import RNPickerSelect from 'react-native-picker-select';
+// import config from "../config.json";
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// const cityAreaData = {
+//     "Vadodara": ["Gorwa", "Manjalpur", "Bajwa"],
+//     "Ahemdabad": ["Chandkheda", "Ranip", "Maninagar"],
+//     "Gandhinagar": ["Gift City", "Akshardham", "koba circle"],
+// };
+
+// const issueCategories = ["Road Damage", "Street Light Outage", "Water Leakage", "Garbage Overflow", "Other"];
+
+
+
+// export default function CivicIssueReport({ navigation }) {
+//   const [location, setLocation] = useState({ latitude: null, longitude: null });
+//   const [imageUri, setImageUri] = useState(null);
+//   const [description, setDescription] = useState('');
+//   const [selectedCity, setSelectedCity] = useState('');
+//   const [selectedArea, setSelectedArea] = useState('');
+//   const [selectedCategory, setSelectedCategory] = useState('');
+//   const [address, setAddress] = useState('');
+//   const [username, setUsername] = useState('');
+//   const [userID, setUserID] = useState('');
+//   const { t } = useTranslation();
+
+//   useEffect(() => {
+//     (async () => {
+//       const { status } = await Location.requestForegroundPermissionsAsync();
+//       if (status === 'granted') {
+//         const location = await Location.getCurrentPositionAsync({});
+//         setLocation({
+//           latitude: location.coords.latitude,
+//           longitude: location.coords.longitude,
+//         });
+//       }
+//     })();
+//   }, []);
+
+//   useEffect(() => {
+//     const fetchUsername = async () => {
+//       const storedUsername = await AsyncStorage.getItem('username');
+//       if (storedUsername) {
+//         setUsername(storedUsername);
+//       }
+//       const userId = await AsyncStorage.getItem('userId'); // Retrieve userId
+//       if (!userId) {
+//         Alert.alert("Error", "User is not authenticated.");
+//         return;
+        
+//       }
+//       setUserID(userId);
+      
+//     };
+//     fetchUsername();
+//   }, []);
+
+//   const handleCameraLaunch = async () => {
+//     const result = await ImagePicker.launchCameraAsync({
+//       mediaTypes: ImagePicker.MediaTypeOptions.Images,
+//       allowsEditing: true,
+//       quality: 1,
+//     });
+//     if (!result.canceled) {
+//       setImageUri(result.assets[0].uri);
+//     }
+//   };
+
+//   const handleSubmit = async () => {
+//     if (!imageUri || !description || !selectedCity || !selectedArea || !selectedCategory || !address) {
+//       Alert.alert("Error", "All fields are required.");
+//       return;
+//     }
+//     const formData = new FormData();
+//     formData.append('photo', { uri: imageUri, name: 'issue.jpg', type: 'image/jpeg' });
+//     formData.append('userId', userID);
+//     formData.append('name', username);
+//     formData.append('city', selectedCity);
+//     formData.append('area', selectedArea);
+//     formData.append('latitude', location.latitude?.toString());
+//     formData.append('longitude', location.longitude?.toString());
+//     formData.append('category', selectedCategory);
+//     formData.append('description', description);
+//     formData.append('address', address);
+
+//     try {
+//       await axios.post(`${config.API_BASE_URL}/api/issue/requests`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+//       Alert.alert("Success", "Issue reported successfully!");
+//       navigation.navigate('Home');
+//     } catch (error) {
+//       Alert.alert("Submission Failed", error.response?.data?.message || "There was an error submitting your report.");
+//       console.log(error.message)
+//     }
+//   };
+
+//   return (
+//     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+//       <ScrollView>
+        
+//         <RNPickerSelect placeholder={{ label: 'Select Issue Category', value: null }} items={issueCategories.map(cat => ({ label: cat, value: cat }))} onValueChange={setSelectedCategory} style={pickerStyles} value={selectedCategory} />
+//         <TextInput style={styles.textbox} placeholder='Enter Address' onChangeText={setAddress} />
+//         <RNPickerSelect placeholder={{ label: 'Select City', value: null }} items={Object.keys(cityAreaData).map(city => ({ label: city, value: city }))} onValueChange={setSelectedCity} style={pickerStyles} value={selectedCity} />
+//         <RNPickerSelect placeholder={{ label: 'Select Area', value: null }} items={selectedCity ? cityAreaData[selectedCity].map(area => ({ label: area, value: area })) : []} onValueChange={setSelectedArea} style={pickerStyles} value={selectedArea} />
+        
+        
+//         <TextInput style={styles.textbox} placeholder='Enter Description' onChangeText={setDescription} multiline />
+//         {/* <Text style={styles.locationText}>Location: Lat {location.latitude}, Lon {location.longitude}</Text> */}
+//         <Button title='Take Photo' onPress={handleCameraLaunch} />
+//         {imageUri && <Image source={{ uri: imageUri }} style={styles.imagePreview} />}
+//       </ScrollView>
+//       <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+//         <Text style={styles.submitText}>Submit</Text>
+//       </TouchableOpacity>
+//     </KeyboardAvoidingView>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: { flex: 1, padding: 15, backgroundColor: "#f9f9f9" },
+//   title: { fontSize: 20, fontWeight: '600', textAlign: 'center', marginVertical: 15 },
+//   textbox: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, marginVertical: 8, backgroundColor: "#fff" },
+//   locationText: { marginTop: 10, fontSize: 14, color: '#555' },
+//   submitBtn: { backgroundColor: "#007BFF", padding: 15, borderRadius: 8, alignItems: "center", marginTop: 20, position: "absolute", bottom: 10, width: "90%", alignSelf: "center" },
+//   submitText: { color: "#fff", fontSize: 16, fontWeight: '600' },
+//   imagePreview: { width: 100, height: 100, borderRadius: 8, marginTop: 15, alignSelf: 'center' },
+// });
 
 const pickerStyles = StyleSheet.create({
   inputIOS: { fontSize: 16, padding: 12, borderRadius: 8, backgroundColor: '#fff', marginVertical: 8 },

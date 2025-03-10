@@ -21,5 +21,6 @@
     "formSubmitted": "फ़ॉर्म सबमिट किया गया!",
     "submissionFailed": "सबमिशन विफल",
     "requestSentSuccess": "अनुरोध सफलतापूर्वक भेजा गया!",
-    "errorSubmitting": "आपका सबमिट करते समय कोई त्रुटि हुई अनुरोध।"
+    "errorSubmitting": "आपका सबमिट करते समय कोई त्रुटि हुई अनुरोध।",
+    "City": "शहर"
   }

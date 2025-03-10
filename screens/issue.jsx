@@ -35,7 +35,7 @@ export default function Issue({ navigation }) {
   const fetchData = async () => {
     try {
       if (location.latitude && location.longitude) {
-        const response = await axios.get('http://192.168.165.143:3000/api/issue/requests/nearby', {
+        const response = await axios.get('http://192.168.31.12:3000/api/issue/requests/nearby', {
           params: { latitude: location.latitude, longitude: location.longitude, radius: 5 }
         });
         setData(response.data.data); // Access nested data array

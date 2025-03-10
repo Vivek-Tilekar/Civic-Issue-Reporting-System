@@ -26,7 +26,7 @@ export default function Signup({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Sign Up</Text>
+      
       <View style={styles.inputView}>
         <TextInput
           style={styles.TextInput}

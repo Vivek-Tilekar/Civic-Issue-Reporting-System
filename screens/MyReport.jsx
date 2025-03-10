@@ -1,47 +1,24 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import RNPickerSelect from 'react-native-picker-select';
-import * as Location from 'expo-location';
 import axios from 'axios';
 import config from "../config.json";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome5 } from '@expo/vector-icons';
 
-export default function Home({ navigation }) {
-  const { t, i18n } = useTranslation();
-  const [location, setLocation] = useState({ latitude: null, longitude: null });
-  const [data, setData] = useState([]);
+export default function MyReport({ navigation }) {
+  const { t } = useTranslation();
+  const [reports, setReports] = useState([]);
   const [username, setUsername] = useState('');
   const [expanded, setExpanded] = useState({});
-  const [activeTab, setActiveTab] = useState('Home');
+  const [activeTab, setActiveTab] = useState('MyReports');
 
-  const requestPermissions = async () => {
-    const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
-    if (locationStatus !== 'granted') {
-      Alert.alert(t("Permission Denied"), t("Location permission is required to proceed."));
-      return false;
-    }
-    return true;
-  };
-
-  const getCurrentLocation = async () => {
-    try {
-      const location = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-    } catch (error) {
-      console.error(t("Error getting location:"), error);
-    }
-  };
-
+  // Custom header with Notifications & Logout
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerShown: true, // Enable custom header
-      headerTitle: 'ResQ', // Remove default title
-      headerLeft: () => null, // Remove back button
+      headerShown: true,
+      headerTitle: 'My Reports',
+      headerLeft: () => null,
       headerRight: () => (
         <View style={styles.headerButtons}>
           {/* Notification Button */}
@@ -57,55 +34,31 @@ export default function Home({ navigation }) {
     });
   }, [navigation]);
 
+  // Fetch Reports
   useEffect(() => {
-    const fetchUsername = async () => {
-      const storedUsername = await AsyncStorage.getItem('username');
-      if (storedUsername) {
-        setUsername(storedUsername);
+    const fetchReports = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('userId'); // Get userId from storage
+        if (!userId) {
+          Alert.alert(t("Error"), t("User ID not found. Please log in again."));
+          return;
+        }
+
+        const response = await axios.get(`${config.API_BASE_URL}/api/issue/requests/${userId}`);
+        setReports(response.data);
+      } catch (error) {
+        console.error(t("Error fetching reports:"), error);
       }
     };
-    fetchUsername();
-  }, []);
 
-  const fetchData = async () => {
-    try {
-      if (location.latitude && location.longitude) {
-        const response = await axios.get(`${config.API_BASE_URL}/api/issue/requests/nearby`, {
-          params: { latitude: location.latitude, longitude: location.longitude, radius: 5 },
-        });
-        setData(response.data.data);
-      }
-    } catch (error) {
-      console.error(t("Error fetching data:"), error);
-    }
-  };
+    fetchReports();
+  }, []);
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem('username');
-    navigation.replace('Login'); // Navigate to login screen
+    await AsyncStorage.removeItem('userId'); // Remove userId as well
+    navigation.replace('Login');
   };
-
-  useEffect(() => {
-    (async () => {
-      const hasPermissions = await requestPermissions();
-      if (hasPermissions) {
-        await getCurrentLocation();
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (location.latitude && location.longitude) {
-      fetchData();
-    }
-  }, [location]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const toggleReadMore = (id) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -118,12 +71,12 @@ export default function Home({ navigation }) {
       <Text style={styles.postLocation}>{t('City')}: {item.city}, {t('Area')}: {item.area}</Text>
       
       <Text style={styles.postDescription}>
-        {expanded[item.id] || item.description.length <= 100 
+        {expanded[item._id] || item.description.length <= 100 
           ? item.description 
           : `${item.description.substring(0, 100)}... `}
         {item.description.length > 100 && (
-          <Text style={styles.readMore} onPress={() => toggleReadMore(item.id)}>
-            {expanded[item.id] ? t('Read Less') : t('Read More')}
+          <Text style={styles.readMore} onPress={() => toggleReadMore(item._id)}>
+            {expanded[item._id] ? t('Read Less') : t('Read More')}
           </Text>
         )}
       </Text>
@@ -133,21 +86,12 @@ export default function Home({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <RNPickerSelect
-        onValueChange={(value) => i18n.changeLanguage(value)}
-        items={[
-          { label: 'English', value: 'en' },
-          { label: 'Gujarati', value: 'gn' },
-          { label: 'Hindi', value: 'hn' },
-        ]}
-      />
       <FlatList
-        data={data}
+        data={reports}
         renderItem={renderItem}
         keyExtractor={(item, index) => index.toString()}
         contentContainerStyle={styles.scrollView}
       />
-
 
       {/* Bottom Navigation Bar */}
       <View style={styles.bottomNav}>
@@ -176,6 +120,8 @@ export default function Home({ navigation }) {
         </TouchableOpacity>
       </View>
     </View>
+
+    
   );
 }
 
@@ -187,7 +133,6 @@ const styles = StyleSheet.create({
   scrollView: {
     padding: 10,
   },
-
   headerButtons: {
     flexDirection: 'row',
     gap: 15,
@@ -202,7 +147,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#fff',
   },
-
   postContainer: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -213,7 +157,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom: 20,
     padding: 10,
   },
   postImage: {
@@ -247,19 +190,7 @@ const styles = StyleSheet.create({
     color: '#888',
     paddingBottom: 10,
   },
-  reportButton: {
-    backgroundColor: '#E74C3C',
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-    margin: 15,
-    elevation: 5,
-  },
-  reportButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -291,5 +222,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
 
