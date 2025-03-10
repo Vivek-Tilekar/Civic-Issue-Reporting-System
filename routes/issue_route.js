@@ -1,5 +1,5 @@
 const express = require("express");
-const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests } = require("../controllers/issue_controller");
+const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests, getUserRequests } = require("../controllers/issue_controller");
 
 const router = express.Router();
 
@@ -16,6 +16,8 @@ router.put('/requests', updateRequestStatus);
 router.delete('/requests/:id', deleteRequest);
 
 router.get('/requests/nearby' , getNearbyRequests)
+
+router.get("/requests/:userId", getUserRequests); // Get all requests of a user
 
 // module.exports = router;
 module.exports = router;

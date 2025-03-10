@@ -114,15 +114,17 @@ const createRequest = async (req, res) => {
     }
 
     try {
-      const { name, city, area, latitude, longitude, category, description, address } = req.body;
+      const { userId, name, city, area, latitude, longitude, category, description, address } = req.body;
 
       // Prepare the photo path
       const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
 
       const newRequest = new Request({
+        userId,
         name,
         city,
         area,
+        address,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         category,  // Changed from "needs" to "category"
@@ -151,67 +153,6 @@ const createRequest = async (req, res) => {
   });
 };
 
-// const createRequest = async (req, res) => {
-//   upload(req, res, async (err) => {
-//     if (err instanceof multer.MulterError) {
-//       // A Multer error occurred when uploading
-//       console.error('Multer error:', err);
-//       return res.status(400).json({ message: 'File upload error', error: err.message });
-//     } else if (err) {
-//       // An unknown error occurred
-//       console.error('Unknown error:', err);
-//       return res.status(500).json({ message: 'Unknown error occurred', error: err.message });
-//     }
-
-//     try {
-//       const { name, phoneNo, city, area, latitude, longitude, needs, description, numberOfPeople, status } = req.body;
-
-//       // Parse needs if it's a string
-//       let parsedNeeds = needs;
-//       if (typeof needs === 'string') {
-//         try {
-//           parsedNeeds = JSON.parse(needs);
-//         } catch (e) {
-//           parsedNeeds = needs.split(',').map(need => need.trim());
-//         }
-//       }
-
-//       // Prepare the photo path
-//       const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
-
-//       const newRequest = new Request({
-//         name,
-//         phoneNo,
-//         city,
-//         area,
-//         latitude: parseFloat(latitude),
-//         longitude: parseFloat(longitude),
-//         needs: parsedNeeds,
-//         description,
-//         numberOfPeople: parseInt(numberOfPeople),
-//         status: status || 'pending', // Set default status if not provided
-//         photo: photoPath,
-//       });
-
-//       await newRequest.save();
-//       res.status(201).json({ 
-//         message: 'Request created successfully', 
-//         data: newRequest 
-//       });
-
-//     } catch (error) {
-//       console.error('Error creating request:', error);
-//       // If there was an error and a file was uploaded, delete it
-//       if (req.file) {
-//         const filePath = path.join(__dirname, '..', req.file.path);
-//         fs.unlink(filePath, (unlinkError) => {
-//           if (unlinkError) console.error('Error deleting file:', unlinkError);
-//         });
-//       }
-//       res.status(500).json({ message: 'Server error', error: error.message });
-//     }
-//   });
-// };
 
 // Get all requests
 const getRequests = async (req, res) => {
@@ -221,6 +162,22 @@ const getRequests = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const getUserRequests = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const userRequests = await Request.find({ userId }).sort({ createdAt: -1 });
+
+    res.status(200).json(userRequests);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -269,4 +226,5 @@ module.exports = {
     getRequests,
     updateRequestStatus,
     deleteRequest,
+    getUserRequests,
   };

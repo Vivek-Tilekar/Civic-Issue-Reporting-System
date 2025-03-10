@@ -3,50 +3,30 @@ const mongoose = require('mongoose');
 // import mongoose from "mongoose";
 
 const requestSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: false,
+
+
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // Reference to the User collection
+    required: true,
   },
-  phoneNo: {
-    type: String,
-    required: false,
-  },
-  city: {
-    type: String,
-    required: false,
-  },
-  area: {
-    type: String,
-    required: false,
-  },
-  latitude: {
-    type: Number,
-    required: false,
-  },
-  longitude: {
-    type: Number,
-    required: false,
-  },
-  needs: {
-    type: [String],
-    required: false,
-  },
-  description: {
-    type: String,
-    required: false,
-  },
-  numberOfPeople: {
-    type: Number,
-    required: false,
-  },
+  name: String,
+  phoneNo: String,
+  city: String,
+  area: String,
+  address: String,
+  latitude: Number,
+  longitude: Number,
+  category: String,
+  description: String,
+  numberOfPeople: Number,
   status: {
     type: String,
-    // enum: ['pending', 'in-progress', 'completed'],
-    default: 'pending',
+    default: "pending",
   },
-  photo : {
-    type : String ,
-  }
-}, { timestamps: false });
+  photo: String,
+},
+{ timestamps: true }
+);
 
 module.exports = mongoose.model('Request', requestSchema);
