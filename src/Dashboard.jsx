@@ -48,6 +48,8 @@ const Dashboard = () => {
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [newStatus, setNewStatus] = useState('');
     const [showPopup, setShowPopup] = useState(false);
+    const [comments, setComments] = useState([]);
+    const [newComment, setNewComment] = useState("");
 
     
 
@@ -95,6 +97,37 @@ const Dashboard = () => {
         }
     };
 
+    useEffect(() => {
+        if (selectedRequest) {
+            fetchComments(selectedRequest._id);
+        }
+    }, [selectedRequest]);
+
+    const fetchComments = async (requestId) => {
+        try {
+            const response = await axios.get(`${config.API_BASE_URL}/api/issue/requests/${requestId}/comments`);
+            setComments(response.data.comments);
+        } catch (error) {
+            console.error("Error fetching comments:", error);
+        }
+    };
+
+    const handleAddComment = async () => {
+        if (!newComment.trim()) return;
+
+        const Username = "ResQ Admin";
+        try {
+            const response = await axios.post(`${config.API_BASE_URL}/api/issue/requests/comment`, {
+                requestId: selectedRequest._id,
+                username: Username,
+                text: newComment
+            });
+            setComments(response.data.comments);
+            setNewComment("");
+        } catch (error) {
+            console.error("Error adding comment:", error);
+        }
+    };
     
 
     const filteredRequests = requests.filter(
@@ -129,9 +162,10 @@ const Dashboard = () => {
           const response = await axios.put(`${config.API_BASE_URL}/api/issue/requests`, {
             id: selectedRequest._id,
             status: newStatus,
+            userId: selectedRequest.userId,
           });
 
-          console.log(selectedRequest._id);
+          console.log(`user id is: ${selectedRequest._id}`);
           console.log(requests._id);
           
           setRequests(requests.map(req => req._id === selectedRequest._id ? response.data.data : req));
@@ -338,7 +372,7 @@ const Dashboard = () => {
                             flex: 1,
                         }}
                     >
-                        <h3>Location and Number of People Breakdown</h3>
+                        <h3>Status Chart of {userData?.area}</h3>
                         <Bar data={statusChartData} options={{ responsive: true }} />
                     </div>
                 </div>
@@ -408,52 +442,237 @@ const Dashboard = () => {
                     </div>
 
                     {selectedRequest && (
-                        <div style={{ 
-                            position: "fixed", 
-                            top: 0, 
-                            left: 0, 
-                            width: "100vw", 
-                            height: "100vh", 
-                            backgroundColor: "rgba(0,0,0,0.5)", 
-                            display: "flex", 
-                            justifyContent: "center", 
-                            alignItems: "center",
-                            overflow: "hidden" // Prevents whole page scroll
-                        }}>
-                            <div style={{ 
-                                backgroundColor: "#fff", 
-                                padding: "20px", 
-                                borderRadius: "8px", 
-                                width: "600px", 
-                                maxHeight: "80vh", // Limits the popup height
-                                overflowY: "auto" // Enables scrolling inside the popup
-                            }}>
+                        // <div style={{ 
+                        //     position: "fixed", 
+                        //     top: 0, 
+                        //     left: 0, 
+                        //     width: "100vw", 
+                        //     height: "100vh", 
+                        //     backgroundColor: "rgba(0,0,0,0.5)", 
+                        //     display: "flex", 
+                        //     justifyContent: "center", 
+                        //     alignItems: "center",
+                        //     overflow: "hidden" // Prevents whole page scroll
+                        // }}>
+                        //     <div style={{ 
+                        //         backgroundColor: "#fff", 
+                        //         padding: "20px", 
+                        //         borderRadius: "8px", 
+                        //         width: "600px", 
+                        //         maxHeight: "80vh", // Limits the popup height
+                        //         overflowY: "auto" // Enables scrolling inside the popup
+                        //     }}>
+                        //         <h2>{selectedRequest.name}</h2>
+                        //         <p><strong>Area:</strong> {selectedRequest.area}</p>
+                        //         <p><strong>Status:</strong> {selectedRequest.status}</p>
+                        //         <p><strong>Category:</strong> {selectedRequest.category}</p>
+                        //         <p><strong>Address:</strong> {selectedRequest.address}</p>
+                        //         <p><strong>Description:</strong> {selectedRequest.description}</p>
+                        //         <p><strong>Sentiment Score:</strong> {sentiment.analyze(selectedRequest.description).score}</p>
+                        //         <img src={`${config.API_BASE_URL}${selectedRequest.photo}`} alt="User Issue" 
+                        //             style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }} 
+                        //         />
+                        //         <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ width: "100%", marginTop: "10px" }}>
+                        //             <option value="pending">Pending</option>
+                        //             <option value="inProgress">In Progress</option>
+                        //             <option value="Completed">Completed</option>
+                        //         </select>
+                        //         <button onClick={updateStatus} 
+                        //             style={{ marginTop: "10px", padding: "10px", width: "100%", border: "none", backgroundColor: "#007BFF", color: "#fff", borderRadius: "5px" }}>
+                        //             Update
+                        //         </button>
+                        //         <button onClick={closePopup} 
+                        //             style={{ marginTop: "10px", padding: "10px", width: "100%", border: "none", backgroundColor: "#DC3545", color: "#fff", borderRadius: "5px" }}>
+                        //             Close
+                        //         </button>
+                        //     </div>
+                        // </div>
+
+                        <div
+                            style={{
+                                position: "fixed",
+                                top: 0,
+                                left: 0,
+                                width: "100vw",
+                                height: "100vh",
+                                backgroundColor: "rgba(0,0,0,0.5)",
+                                display: "flex",
+                                justifyContent: "center",
+                                alignItems: "center",
+                                overflow: "hidden"
+                            }}
+                        >
+                            <div
+                                style={{
+                                    backgroundColor: "#fff",
+                                    padding: "20px",
+                                    borderRadius: "8px",
+                                    width: "600px",
+                                    maxHeight: "80vh",
+                                    overflowY: "auto",
+                                    position: "relative"
+                                }}
+                            >
+                                {/* Request Details */}
                                 <h2>{selectedRequest.name}</h2>
-                                <p><strong>Area:</strong> {selectedRequest.area}</p>
-                                <p><strong>Status:</strong> {selectedRequest.status}</p>
-                                <p><strong>Category:</strong> {selectedRequest.category}</p>
-                                <p><strong>Address:</strong> {selectedRequest.address}</p>
-                                <p><strong>Description:</strong> {selectedRequest.description}</p>
-                                <p><strong>Sentiment Score:</strong> {sentiment.analyze(selectedRequest.description).score}</p>
-                                <img src={`${config.API_BASE_URL}${selectedRequest.photo}`} alt="User Issue" 
-                                    style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }} 
+                                <p>
+                                    <strong>Area:</strong> {selectedRequest.area}
+                                </p>
+                                <p>
+                                    <strong>Status:</strong> {selectedRequest.status}
+                                </p>
+                                <p>
+                                    <strong>Category:</strong> {selectedRequest.category}
+                                </p>
+                                <p>
+                                    <strong>Address:</strong> {selectedRequest.address}
+                                </p>
+                                <p>
+                                    <strong>Description:</strong> {selectedRequest.description}
+                                </p>
+                                <p>
+                                    <strong>Sentiment Score:</strong> {sentiment.analyze(selectedRequest.description).score}
+                                </p>
+                                <img
+                                    src={`${config.API_BASE_URL}${selectedRequest.photo}`}
+                                    alt="User Issue"
+                                    style={{ width: "100%", borderRadius: "8px", marginTop: "10px" }}
                                 />
-                                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} style={{ width: "100%", marginTop: "10px" }}>
-                                    <option value="pending">Pending</option>
-                                    <option value="inProgress">In Progress</option>
-                                    <option value="Completed">Completed</option>
-                                </select>
-                                <button onClick={updateStatus} 
-                                    style={{ marginTop: "10px", padding: "10px", width: "100%", border: "none", backgroundColor: "#007BFF", color: "#fff", borderRadius: "5px" }}>
-                                    Update
-                                </button>
-                                <button onClick={closePopup} 
-                                    style={{ marginTop: "10px", padding: "10px", width: "100%", border: "none", backgroundColor: "#DC3545", color: "#fff", borderRadius: "5px" }}>
-                                    Close
-                                </button>
+
+                                {/* Status Update Section (Moved Above Comments) */}
+                                <div
+                                    style={{
+                                        background: "#f9f9f9",
+                                        padding: "15px",
+                                        borderRadius: "8px",
+                                        marginTop: "15px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "10px"
+                                    }}
+                                >
+                                    <select
+                                        value={newStatus}
+                                        onChange={(e) => setNewStatus(e.target.value)}
+                                        style={{
+                                            width: "100%",
+                                            padding: "10px",
+                                            borderRadius: "5px",
+                                            border: "1px solid #ccc"
+                                        }}
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="inProgress">In Progress</option>
+                                        <option value="Completed">Completed</option>
+                                    </select>
+
+                                    <button
+                                        onClick={updateStatus}
+                                        style={{
+                                            padding: "10px",
+                                            width: "100%",
+                                            border: "none",
+                                            backgroundColor: "#007BFF",
+                                            color: "#fff",
+                                            borderRadius: "5px",
+                                            fontSize: "14px",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        Update Status
+                                    </button>
+
+                                    <button
+                                        onClick={closePopup}
+                                        style={{
+                                            padding: "10px",
+                                            width: "100%",
+                                            border: "none",
+                                            backgroundColor: "#DC3545",
+                                            color: "#fff",
+                                            borderRadius: "5px",
+                                            fontSize: "14px",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+
+                                {/* Comments Section */}
+                                <div
+                                    style={{
+                                        marginTop: "15px",
+                                        background: "#f9f9f9",
+                                        padding: "15px",
+                                        borderRadius: "8px",
+                                        maxHeight: "250px",
+                                        overflowY: "auto"
+                                    }}
+                                >
+                                    <h3 style={{ marginBottom: "10px", fontSize: "16px" }}>Comments ({comments.length})</h3>
+
+                                    <div style={{ maxHeight: "150px", overflowY: "auto", paddingRight: "5px" }}>
+                                        {comments.length > 0 ? (
+                                            comments.map((comment, index) => (
+                                                <div
+                                                    key={index}
+                                                    style={{
+                                                        background: index % 2 === 0 ? "#fff" : "#f1f1f1",
+                                                        padding: "10px",
+                                                        borderRadius: "5px",
+                                                        marginBottom: "5px",
+                                                        fontSize: "14px",
+                                                        lineHeight: "1.4"
+                                                    }}
+                                                >
+                                                    <strong>{comment.username}:</strong> {comment.text}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p style={{ fontSize: "14px", color: "#777" }}>No comments yet.</p>
+                                        )}
+                                    </div>
+
+                                    {/* Comment Input Section */}
+                                    <div style={{ display: "flex", flexDirection: "column", marginTop: "10px", gap: "8px" }}>
+                                        <textarea
+                                            value={newComment}
+                                            onChange={(e) => setNewComment(e.target.value)}
+                                            placeholder="Write a comment..."
+                                            style={{
+                                                width: "100%",
+                                                padding: "10px",
+                                                borderRadius: "5px",
+                                                border: "1px solid #ccc",
+                                                fontSize: "14px",
+                                                resize: "none",
+                                                minHeight: "40px"
+                                            }}
+                                        />
+                                        <button
+                                            onClick={handleAddComment}
+                                            style={{
+                                                padding: "10px",
+                                                border: "none",
+                                                backgroundColor: "#28a745",
+                                                color: "#fff",
+                                                borderRadius: "5px",
+                                                fontSize: "14px",
+                                                cursor: "pointer",
+                                                transition: "background 0.2s ease"
+                                            }}
+                                            onMouseOver={(e) => (e.target.style.backgroundColor = "#218838")}
+                                            onMouseOut={(e) => (e.target.style.backgroundColor = "#28a745")}
+                                        >
+                                            Add Comment
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    )}
+                    )
+                    }
 
                     
 
