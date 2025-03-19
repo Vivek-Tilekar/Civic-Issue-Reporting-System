@@ -1,5 +1,5 @@
 const express = require("express");
-const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests, getUserRequests } = require("../controllers/issue_controller");
+const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests, getUserRequests, addComment, getComments } = require("../controllers/issue_controller");
 
 const router = express.Router();
 
@@ -18,6 +18,10 @@ router.delete('/requests/:id', deleteRequest);
 router.get('/requests/nearby' , getNearbyRequests)
 
 router.get("/requests/:userId", getUserRequests); // Get all requests of a user
+
+router.post("/requests/comment", addComment);  // Add comment
+
+router.get("/requests/:requestId/comments", getComments);  // Get comments
 
 // module.exports = router;
 module.exports = router;

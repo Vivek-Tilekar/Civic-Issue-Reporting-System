@@ -3,6 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const Request = require('../models/issue_model');
+const { io } = require("../index");
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth's radius in kilometers
@@ -182,22 +183,75 @@ const getUserRequests = async (req, res) => {
 };
 
 // Update a request status
-const updateRequestStatus = async (req, res) => {
-  const { id } = req.body
-  const { status } = req.body;
+// const updateRequestStatus = async (req, res) => {
+//   const { id } = req.body
+//   const { status } = req.body;
   
 
+//   try {
+//     const updatedRequest = await Request.findByIdAndUpdate(id, { status }, { new: true });
+
+//     if (!updatedRequest) {
+//       return res.status(404).json({ message: 'Request not found' });
+//     }
+
+//     res.status(200).json({ message: 'Request status updated', data: updatedRequest });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
+
+// const updateRequestStatus = async (req, res) => {
+//   const { id, status } = req.body;
+
+//   try {
+//       const updatedRequest = await Request.findByIdAndUpdate(id, { status }, { new: true });
+
+//       if (!updatedRequest) {
+//           return res.status(404).json({ message: "Request not found" });
+//       }
+
+//       // Emit a notification to the frontend via Socket.IO
+//       const io = req.app.get("socketio");
+//       io.emit("statusUpdate", {
+//           requestId: id,
+//           status: updatedRequest.status,
+//           message: `Your request status has changed to ${updatedRequest.status}`,
+//       });
+
+//       res.status(200).json({ message: "Request status updated", data: updatedRequest });
+//   } catch (error) {
+//       console.error(error);
+//       res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
+const updateRequestStatus = async (req, res) => {
+  const { id, status, userId } = req.body; // Ensure request contains userId
+
   try {
-    const updatedRequest = await Request.findByIdAndUpdate(id, { status }, { new: true });
+      const updatedRequest = await Request.findByIdAndUpdate(id, { status }, { new: true });
 
-    if (!updatedRequest) {
-      return res.status(404).json({ message: 'Request not found' });
-    }
+      if (!updatedRequest) {
+          return res.status(404).json({ message: "Request not found" });
+      }
 
-    res.status(200).json({ message: 'Request status updated', data: updatedRequest });
+      // Emit event only to the specific user
+      if (io) {
+          console.log(`🔔 Sending update to user ${userId}`);
+          io.to(userId).emit("statusUpdate", {
+              userId,
+              message: `Your request status changed to: ${status}`
+          });
+      } else {
+          console.error("❌ Socket.IO is not initialized.");
+      }
+
+      res.status(200).json({ message: "✅ Request status updated", data: updatedRequest });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: "❌ Server error", error: error.message });
   }
 };
 
@@ -219,6 +273,50 @@ const deleteRequest = async (req, res) => {
   }
 };
 
+// Comments
+
+const addComment = async (req, res) => {
+  try {
+    const { requestId, userId, username, text } = req.body;
+
+    const request = await Request.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    const newComment = {
+      userId,
+      username,
+      text,
+      createdAt: new Date(),
+    };
+
+    request.comments.push(newComment);
+    await request.save();
+
+    res.status(201).json({ message: "Comment added successfully", comments: request.comments });
+  } catch (error) {
+    console.error("Error adding comment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const getComments = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const request = await Request.findById(requestId).populate("comments.userId", "name"); // Populate user details
+    if (!request) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    res.status(200).json({ comments: request.comments });
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 
 module.exports = {
     getNearbyRequests,
@@ -227,4 +325,6 @@ module.exports = {
     updateRequestStatus,
     deleteRequest,
     getUserRequests,
+    getComments,
+    addComment,
   };

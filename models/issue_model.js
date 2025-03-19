@@ -25,6 +25,14 @@ const requestSchema = new mongoose.Schema({
     default: "pending",
   },
   photo: String,
+  comments: [
+    {
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Reference to the user who commented
+      username: String,
+      text: String,
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
 },
 { timestamps: true }
 );
