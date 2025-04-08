@@ -23,7 +23,11 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb+srv://vivektilekar17:wO3kdLZm6TFtLnrf@resq.xus2nep.mongodb.net/ResQ")
+mongoose.connect("mongodb+srv://vivektilekar17:wO3kdLZm6TFtLnrf@resq.xus2nep.mongodb.net/ResQ", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 10000, // 10s timeout
+})
     .then(() => console.log("✅ Database connected"))
     .catch((err) => console.log(err));
 
