@@ -3,36 +3,75 @@ const bcryptjs = require("bcryptjs");
 const jwt = require('jsonwebtoken');
 const AreaAdmin = require("../models/area_admin_model") 
 
+// const signup = async (req, res, next) => {
+//   const { username, email, password } = req.body;
+
+//   if (
+//     !username ||
+//     !email ||
+//     !password ||
+//     username === '' ||
+//     email === '' ||
+//     password === ''
+//   ) {
+//     res.send("Wrong data format");
+//   }
+
+//   const hashedPassword = bcryptjs.hashSync(password, 10);
+
+//   const newUser = new User({
+//     username,
+//     email,
+//     password: hashedPassword,
+//   });
+
+//   try {
+//     await newUser.save();
+//     res.json('Signup successful');
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 const signup = async (req, res, next) => {
-  const { username, email, password } = req.body;
-
-  if (
-    !username ||
-    !email ||
-    !password ||
-    username === '' ||
-    email === '' ||
-    password === ''
-  ) {
-    res.send("Wrong data format");
-  }
-
-  const hashedPassword = bcryptjs.hashSync(password, 10);
-
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
-  });
-
   try {
+    const { username, email, phone, area, pincode, password, confirmPassword } = req.body;
+
+    // Validate all fields
+    if (!username || !email || !phone || !area || !pincode || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Validate password match
+    // if (password !== confirmPassword) {
+    //   return res.status(400).json({ message: "Passwords do not match" });
+    // }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already registered" });
+    }
+
+    // Hash password
+    const hashedPassword = bcryptjs.hashSync(password, 10);
+
+    // Create new user
+    const newUser = new User({
+      username,
+      email,
+      phone,
+      area,
+      pincode,
+      password: hashedPassword,
+    });
+
     await newUser.save();
-    res.json('Signup successful');
+    res.status(201).json({ message: "Signup successful" });
   } catch (error) {
     next(error);
   }
 };
-
 
 
 const signin = async (req, res, next) => {

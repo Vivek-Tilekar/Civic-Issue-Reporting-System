@@ -1,5 +1,5 @@
 const express = require("express");
-const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests, getUserRequests, addComment, getComments } = require("../controllers/issue_controller");
+const { createRequest, getRequests, updateRequestStatus, deleteRequest, getNearbyRequests, getUserRequests, addComment, getComments, getUserProfile, updateUserProfile } = require("../controllers/issue_controller");
 
 const router = express.Router();
 
@@ -22,6 +22,12 @@ router.get("/requests/:userId", getUserRequests); // Get all requests of a user
 router.post("/requests/comment", addComment);  // Add comment
 
 router.get("/requests/:requestId/comments", getComments);  // Get comments
+
+// Get user profile
+router.get("/profile/:id", getUserProfile);
+
+// Update user profile
+router.put("/profile/:id", updateUserProfile);
 
 // module.exports = router;
 module.exports = router;

@@ -5,8 +5,9 @@ const socketIo = require("socket.io");
 const cors = require("cors");
 const path = require("path");
 
+// Initialize Express and HTTP server
 const app = express();
-const server = http.createServer(app); // Use HTTP server for WebSockets
+const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "*", // Allow all origins
@@ -14,21 +15,22 @@ const io = socketIo(server, {
     }
 });
 
-// Export io before requiring other routes to prevent circular dependency
+// Export io before requiring routes (Prevents circular dependency)
 module.exports = { io };
 
+// Middleware
 app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-mongoose.connect("mongodb://localhost:27017/ResQ")
+mongoose.connect("mongodb+srv://vivektilekar17:wO3kdLZm6TFtLnrf@resq.xus2nep.mongodb.net/ResQ")
     .then(() => console.log("✅ Database connected"))
     .catch((err) => console.log(err));
 
 // Serve uploaded images
 app.use("/uploads/images", express.static(path.join(__dirname, "uploads", "images")));
 
-// Define routes (Import after io export to prevent circular dependency)
+// Define routes
 const authRoutes = require("./routes/auth_route");
 const issueRoute = require("./routes/issue_route");
 
@@ -37,11 +39,32 @@ app.use("/api/issue", issueRoute);
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
-    const userId = socket.handshake.query.userId; // Get userId from client
+    const userId = socket.handshake.query.userId;
+    
     if (userId) {
-        socket.join(userId); // User joins a room with their userId
+        socket.join(userId);
         console.log(`✅ User ${userId} connected to socket`);
     }
+
+    // User joins their personal room
+    socket.on("joinRoom", (userId) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`User ${userId} joined room`);
+        }
+    });
+
+    // Real-time profile updates
+    socket.on("profileChange", (userId) => {
+        User.findById(userId).select("-password").then((updatedUser) => {
+            io.to(userId).emit("profileUpdated", updatedUser);
+        });
+    });
+
+    // Real-time issue request updates
+    socket.on("newRequest", () => {
+        io.emit("requestsUpdated"); // Notify all clients
+    });
 
     socket.on("disconnect", () => {
         console.log(`❌ User ${userId} disconnected`);
@@ -53,6 +76,77 @@ const PORT = 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
 });
+
+
+
+// const express = require("express");
+// const mongoose = require("mongoose");
+// const http = require("http");
+// const socketIo = require("socket.io");
+// const cors = require("cors");
+// const path = require("path");
+
+// const app = express();
+// const server = http.createServer(app); // Use HTTP server for WebSockets
+// const io = socketIo(server, {
+//     cors: {
+//         origin: "*", // Allow all origins
+//         methods: ["GET", "POST"]
+//     }
+// });
+
+// // Export io before requiring other routes to prevent circular dependency
+// module.exports = { io };
+
+// app.use(express.json());
+// app.use(cors());
+
+// // MongoDB Connection
+// mongoose.connect("mongodb://localhost:27017/ResQ")
+//     .then(() => console.log("✅ Database connected"))
+//     .catch((err) => console.log(err));
+
+// // Serve uploaded images
+// app.use("/uploads/images", express.static(path.join(__dirname, "uploads", "images")));
+
+// // Define routes (Import after io export to prevent circular dependency)
+// const authRoutes = require("./routes/auth_route");
+// const issueRoute = require("./routes/issue_route");
+
+// app.use("/api/auth", authRoutes);
+// app.use("/api/issue", issueRoute);
+
+// // Socket.IO connection handling
+// io.on("connection", (socket) => {
+//     const userId = socket.handshake.query.userId; // Get userId from client
+//     if (userId) {
+//         socket.join(userId); // User joins a room with their userId
+//         console.log(`✅ User ${userId} connected to socket`);
+//     }
+
+//     socket.on("joinRoom", (userId) => {
+//         if (userId) {
+//             socket.join(userId);
+//             console.log(`User ${userId} joined room`);
+//         }
+//     });
+
+//     socket.on("profileChange", (userId) => {
+//         User.findById(userId).select("-password").then((updatedUser) => {
+//             io.to(userId).emit("profileUpdated", updatedUser); // Send update
+//         });
+//     });
+
+//     socket.on("disconnect", () => {
+//         console.log(`❌ User ${userId} disconnected`);
+//     });
+// });
+
+// // Start the server
+// const PORT = 3000;
+// server.listen(PORT, () => {
+//     console.log(`🚀 Server is running on port ${PORT}`);
+// });
 
 
 

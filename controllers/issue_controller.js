@@ -4,6 +4,7 @@ const multer = require('multer');
 const fs = require('fs');
 const Request = require('../models/issue_model');
 const { io } = require("../index");
+const User = require("../models/user_model");
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371; // Earth's radius in kilometers
@@ -106,65 +107,130 @@ const upload = multer({
 
 const createRequest = async (req, res) => {
   upload(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
-      console.error('Multer error:', err);
-      return res.status(400).json({ message: 'File upload error', error: err.message });
-    } else if (err) {
-      console.error('Unknown error:', err);
-      return res.status(500).json({ message: 'Unknown error occurred', error: err.message });
-    }
-
-    try {
-      const { userId, name, city, area, latitude, longitude, category, description, address } = req.body;
-
-      // Prepare the photo path
-      const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
-
-      const newRequest = new Request({
-        userId,
-        name,
-        city,
-        area,
-        address,
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
-        category,  // Changed from "needs" to "category"
-        description,
-        status: 'pending', // Default status
-        photo: photoPath,
-        address
-      });
-
-      await newRequest.save();
-      res.status(201).json({ 
-        message: 'Request created successfully', 
-        data: newRequest 
-      });
-
-    } catch (error) {
-      console.error('Error creating request:', error);
-      if (req.file) {
-        const filePath = path.join(__dirname, '..', req.file.path);
-        fs.unlink(filePath, (unlinkError) => {
-          if (unlinkError) console.error('Error deleting file:', unlinkError);
-        });
+      if (err instanceof multer.MulterError) {
+          console.error("Multer error:", err);
+          return res.status(400).json({ message: "File upload error", error: err.message });
+      } else if (err) {
+          console.error("Unknown error:", err);
+          return res.status(500).json({ message: "Unknown error occurred", error: err.message });
       }
-      res.status(500).json({ message: 'Server error', error: error.message });
-    }
+
+      try {
+          const { userId, name, city, area, latitude, longitude, category, description, address } = req.body;
+          const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
+
+          const newRequest = new Request({
+              userId,
+              name,
+              city,
+              area,
+              address,
+              latitude: parseFloat(latitude),
+              longitude: parseFloat(longitude),
+              category,
+              description,
+              status: "pending", // Default status
+              photo: photoPath
+          });
+
+          await newRequest.save();
+          
+          // Emit socket event for real-time updates
+          io.emit("requestCreated", newRequest); // Notify all clients
+
+          res.status(201).json({
+              message: "Request created successfully",
+              data: newRequest
+          });
+
+      } catch (error) {
+          console.error("Error creating request:", error);
+
+          // Delete uploaded file if request creation fails
+          if (req.file) {
+              const filePath = path.join(__dirname, "..", req.file.path);
+              fs.unlink(filePath, (unlinkError) => {
+                  if (unlinkError) console.error("Error deleting file:", unlinkError);
+              });
+          }
+
+          res.status(500).json({ message: "Server error", error: error.message });
+      }
   });
 };
 
-
-// Get all requests
+// Get all requests (with real-time updates)
 const getRequests = async (req, res) => {
   try {
-    const requests = await Request.find();
-    res.status(200).json({ message: 'Requests fetched successfully', data: requests });
+      const requests = await Request.find().sort({ createdAt: -1 }); // Fetch latest first
+      res.status(200).json({ message: "Requests fetched successfully", data: requests });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+      console.error(error);
+      res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// const createRequest = async (req, res) => {
+//   upload(req, res, async (err) => {
+//     if (err instanceof multer.MulterError) {
+//       console.error('Multer error:', err);
+//       return res.status(400).json({ message: 'File upload error', error: err.message });
+//     } else if (err) {
+//       console.error('Unknown error:', err);
+//       return res.status(500).json({ message: 'Unknown error occurred', error: err.message });
+//     }
+
+//     try {
+//       const { userId, name, city, area, latitude, longitude, category, description, address } = req.body;
+
+//       // Prepare the photo path
+//       const photoPath = req.file ? `/uploads/images/${req.file.filename}` : null;
+
+//       const newRequest = new Request({
+//         userId,
+//         name,
+//         city,
+//         area,
+//         address,
+//         latitude: parseFloat(latitude),
+//         longitude: parseFloat(longitude),
+//         category,  // Changed from "needs" to "category"
+//         description,
+//         status: 'pending', // Default status
+//         photo: photoPath,
+//         address
+//       });
+
+//       await newRequest.save();
+//       res.status(201).json({ 
+//         message: 'Request created successfully', 
+//         data: newRequest 
+//       });
+
+//     } catch (error) {
+//       console.error('Error creating request:', error);
+//       if (req.file) {
+//         const filePath = path.join(__dirname, '..', req.file.path);
+//         fs.unlink(filePath, (unlinkError) => {
+//           if (unlinkError) console.error('Error deleting file:', unlinkError);
+//         });
+//       }
+//       res.status(500).json({ message: 'Server error', error: error.message });
+//     }
+//   });
+// };
+
+
+// // Get all requests
+// const getRequests = async (req, res) => {
+//   try {
+//     const requests = await Request.find();
+//     res.status(200).json({ message: 'Requests fetched successfully', data: requests });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
 
 const getUserRequests = async (req, res) => {
   try {
@@ -301,6 +367,38 @@ const addComment = async (req, res) => {
   }
 };
 
+// const addComment = async (req, res, io) => {
+//   try {
+//     const { requestId, userId, username, text } = req.body;
+
+//     const request = await Request.findById(requestId);
+//     if (!request) {
+//       return res.status(404).json({ message: "Post not found" });
+//     }
+
+//     const newComment = {
+//       userId,
+//       username,
+//       text,
+//       createdAt: new Date(),
+//     };
+
+//     request.comments.push(newComment);
+//     await request.save();
+
+//     // Emit a socket event to notify the request owner about the new comment
+//     io.to(request.userId.toString()).emit("newComment", {
+//       requestId,
+//       message: `New comment from ${username}: ${text}`,
+//     });
+
+//     res.status(201).json({ message: "Comment added successfully", comments: request.comments });
+//   } catch (error) {
+//     console.error("Error adding comment:", error);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
 const getComments = async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -317,6 +415,46 @@ const getComments = async (req, res) => {
   }
 };
 
+// Get User Profile
+const getUserProfile = async (req, res) => {
+  try {
+      const userId = req.params.id; // Get user ID from URL
+      const user = await User.findById(userId).select("-password"); // Exclude password
+
+      if (!user) {
+          return res.status(404).json({ message: "User not found" });
+      }
+
+      res.status(200).json(user);
+  } catch (error) {
+      res.status(500).json({ message: "Server Error", error });
+  }
+};
+
+// Update User Profile
+const updateUserProfile = async (req, res) => {
+  try {
+      const userId = req.params.id;
+      const { username, phone, area, pincode } = req.body;
+
+      // Ensure email is not updated
+      const updateData = { username, phone, area, pincode };
+
+      const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true, select: "-password" });
+
+      if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+      }
+
+      // Emit real-time update to user via WebSocket
+      io.to(userId).emit("profileUpdated", updatedUser);
+
+      res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
+  } catch (error) {
+      res.status(500).json({ message: "Server Error", error });
+  }
+};
+
 
 module.exports = {
     getNearbyRequests,
@@ -327,4 +465,6 @@ module.exports = {
     getUserRequests,
     getComments,
     addComment,
+    getUserProfile,
+    updateUserProfile
   };
