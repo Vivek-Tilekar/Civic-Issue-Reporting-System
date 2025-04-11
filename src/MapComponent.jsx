@@ -35,6 +35,8 @@ const MapComponent = ({ filteredRequests, markerIcon, city }) => {
 
     console.log(viewPort);
 
+    const requestsArray = Array.isArray(filteredRequests) ? filteredRequests : filteredRequests ? [filteredRequests] : [];
+
     return (
         <Map
             {...viewPort} // Spread state values directly instead of using `viewState`
@@ -43,9 +45,13 @@ const MapComponent = ({ filteredRequests, markerIcon, city }) => {
             mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
             mapLib={import("maplibre-gl")}
         >
-            {filteredRequests.map((request) => (
+            {requestsArray.map((request) => (
                 <Marker key={request._id} latitude={request.latitude} longitude={request.longitude}>
-                    <img src={markerIcon} alt="marker" style={{ width: 30, height: 40 }} />
+                    <img src={markerIcon} alt="marker" style={{ width: 30, height: 40 }} 
+                        onClick={() => {
+                            const googleMapsUrl = `https://www.google.com/maps/place/${request.latitude},${request.longitude}`;
+                            window.open(googleMapsUrl, "_blank");}} 
+                    />
                 </Marker>
             ))}
         </Map>
