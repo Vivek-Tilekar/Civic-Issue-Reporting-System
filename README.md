@@ -25,9 +25,3 @@ This repository contains three main branches, each representing a key component 
 - View a feed of all reported issues and comment on existing reports.
 - Receive real-time push notifications when their reported issue status is updated.
 
-### Setup Instructions:
-```bash
-git checkout main
-cd mobile-app
-npm install
-npx react-native run-android # or run-ios
